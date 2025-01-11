@@ -13,8 +13,8 @@ with app.app_context():
     
     # Create user
     new_user = User(
-        username='admin',
-        password_hash=generate_password_hash('your_password')
+        username='xmahmoudokel',
+        password_hash=generate_password_hash('19901986mM')
     )
     
     # Add to database
