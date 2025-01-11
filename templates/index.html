@@ -1,0 +1,150 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">TaskBot</h1>
+        
+        <!-- Task Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Tasks</h2>
+            <div class="mb-4">
+                <input type="text" id="taskInput" placeholder="Enter new task" 
+                    class="w-full p-2 border rounded">
+                <button onclick="createTask()" 
+                    class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+                    Add Task
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <select id="statusFilter" onchange="loadTasks()" 
+                    class="p-2 border rounded">
+                    <option value="">All Tasks</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="frozen">Frozen</option>
+                </select>
+            </div>
+            
+            <div id="taskList" class="space-y-2"></div>
+        </div>
+        
+        <!-- Notes Section -->
+        <div>
+            <h2 class="text-2xl font-semibold mb-4">Notes</h2>
+            <div class="mb-4">
+                <textarea id="noteInput" placeholder="Enter new note" 
+                    class="w-full p-2 border rounded"></textarea>
+                <button onclick="createNote()" 
+                    class="mt-2 bg-green-500 text-white px-4 py-2 rounded">
+                    Add Note
+                </button>
+            </div>
+            
+            <div id="noteList" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load tasks and notes when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+            loadNotes();
+        });
+
+        async function createTask() {
+            const description = document.getElementById('taskInput').value;
+            if (!description) return;
+
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ description })
+            });
+
+            document.getElementById('taskInput').value = '';
+            loadTasks();
+        }
+
+        async function loadTasks() {
+            const status = document.getElementById('statusFilter').value;
+            const response = await fetch(`/api/tasks${status ? `?status=${status}` : ''}`);
+            const tasks = await response.json();
+            
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = tasks.map(task => `
+                <div class="bg-white p-4 rounded shadow">
+                    <p>${task.description}</p>
+                    <div class="mt-2">
+                        <select onchange="updateTaskStatus(${task.id}, this.value)" 
+                            class="text-sm border rounded p-1">
+                            <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>
+                                Pending
+                            </option>
+                            <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>
+                                Completed
+                            </option>
+                            <option value="frozen" ${task.status === 'frozen' ? 'selected' : ''}>
+                                Frozen
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateTaskStatus(taskId, status) {
+            await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status })
+            });
+            loadTasks();
+        }
+
+        async function createNote() {
+            const content = document.getElementById('noteInput').value;
+            if (!content) return;
+
+            await fetch('/api/notes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ content })
+            });
+
+            document.getElementById('noteInput').value = '';
+            loadNotes();
+        }
+
+        async function loadNotes() {
+            const response = await fetch('/api/notes');
+            const notes = await response.json();
+            
+            const noteList = document.getElementById('noteList');
+            noteList.innerHTML = notes.map(note => `
+                <div class="bg-white p-4 rounded shadow">
+                    <p>${note.content}</p>
+                    <button onclick="voidNote(${note.id})" 
+                        class="mt-2 text-sm text-red-500">
+                        Void Note
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function voidNote(noteId) {
+            await fetch(`/api/notes/${noteId}/void`, {
+                method: 'PUT'
+            });
+            loadNotes();
+        }
+    </script>
+</body>
+</html>

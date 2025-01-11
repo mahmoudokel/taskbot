@@ -1,0 +1,9 @@
+flask==2.2.5
+werkzeug==2.2.3
+sqlalchemy==1.4.41
+flask-sqlalchemy==2.5.1
+python-dotenv==1.0.0
+requests==2.31.0
+gunicorn==21.2.0
+openai==0.28.0
+pyotp==2.8.0
