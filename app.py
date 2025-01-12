@@ -27,7 +27,7 @@ class User(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(500), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, completed, frozen
+    status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -40,6 +40,28 @@ class Note(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+# Debug routes
+@app.route('/debug-users')
+def debug_users():
+    users = User.query.all()
+    return jsonify([{'id': user.id, 'username': user.username} for user in users])
+
+@app.route('/init-db')
+def initialize_database():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        
+        # Create admin user
+        admin = User(
+            username='taskbot_admin',
+            password_hash=generate_password_hash('admin123456')
+        )
+        db.session.add(admin)
+        db.session.commit()
+    return 'Database initialized with admin user'
+
+# Main routes
 @app.route('/')
 def home():
     if 'user_id' not in session:
@@ -55,13 +77,20 @@ def login():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.json
+    print(f"Login attempt for username: {data.get('username')}")  # Debug log
+    
     user = User.query.filter_by(username=data['username']).first()
+    if not user:
+        print("User not found")  # Debug log
+        return jsonify({'success': False, 'message': 'User not found'}), 401
     
-    if user and check_password_hash(user.password_hash, data['password']):
-        session['user_id'] = user.id
-        return jsonify({'success': True, 'message': 'Login successful'})
+    if not check_password_hash(user.password_hash, data['password']):
+        print("Invalid password")  # Debug log
+        return jsonify({'success': False, 'message': 'Invalid password'}), 401
     
-    return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+    session['user_id'] = user.id
+    print(f"Login successful for user ID: {user.id}")  # Debug log
+    return jsonify({'success': True, 'message': 'Login successful'})
 
 @app.route('/logout')
 def logout():
@@ -74,7 +103,7 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('index.html')
 
-# Task Routes
+# Task routes
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     if 'user_id' not in session:
@@ -121,7 +150,7 @@ def update_task(task_id):
     db.session.commit()
     return jsonify({'message': 'Task updated'})
 
-# Note Routes
+# Note routes
 @app.route('/api/notes', methods=['POST'])
 def create_note():
     if 'user_id' not in session:
@@ -161,9 +190,6 @@ def void_note(note_id):
     note.is_void = True
     db.session.commit()
     return jsonify({'message': 'Note voided'})
-
-with app.app_context():
-    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)
