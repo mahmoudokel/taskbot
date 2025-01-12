@@ -164,6 +164,27 @@ def void_note(note_id):
 
 with app.app_context():
     db.create_all()
+# Add this near the end of app.py, just before if __name__ == '__main__':
+def create_admin_user():
+    with app.app_context():
+        try:
+            # Create tables
+            db.create_all()
+            
+            # Check if admin user exists
+            admin = User.query.filter_by(username='admin123').first()
+            if not admin:
+                admin = User(
+                    username='admin123',
+                    password_hash=generate_password_hash('password123')
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print('Admin user created successfully')
+        except Exception as e:
+            print(f'Error creating admin: {e}')
 
+# Call function
+create_admin_user()
 if __name__ == '__main__':
     app.run(debug=True)

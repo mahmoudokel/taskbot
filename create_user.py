@@ -2,22 +2,19 @@ from app import app, db, User
 from werkzeug.security import generate_password_hash
 import secrets
 
-# Generate a secure secret key
-secret_key = secrets.token_urlsafe(32)
-print("\nYour SECRET_KEY for Render:")
-print(secret_key)
-
 with app.app_context():
     # Create tables
     db.create_all()
     
-    # Create user
+    # Create user with specific credentials
     new_user = User(
-        username='xmahmoudokel',
-        password_hash=generate_password_hash('19901986mM')
+        username='admin123',  # This will be your username
+        password_hash=generate_password_hash('password123')  # This will be your password
     )
     
     # Add to database
     db.session.add(new_user)
     db.session.commit()
     print("\nUser created successfully!")
+    print("Username: admin123")
+    print("Password: password123")
